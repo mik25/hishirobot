@@ -3,7 +3,7 @@ from bot import AUTHORIZED_CHATS, SUDO_USERS, dispatcher, DB_URI
 from telegram.ext import CommandHandler
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.bot_commands import BotCommands
-from bot.helper.ext_utils.db_handler import DbManger
+from bot.helper.ext_utils.db_handler import DbManager
 
 
 def authorize(update, context):
@@ -16,7 +16,7 @@ def authorize(update, context):
         if user_id in AUTHORIZED_CHATS:
             msg = 'User Already Authorized'
         elif DB_URI is not None:
-            msg = DbManger().db_auth(user_id)
+            msg = DbManager().db_auth(user_id)
         else:
             with open('authorized_chats.txt', 'a') as file:
                 file.write(f'{user_id}\n')
@@ -29,7 +29,7 @@ def authorize(update, context):
             msg = 'Chat Already Authorized'
 
         elif DB_URI is not None:
-            msg = DbManger().db_auth(chat_id)
+            msg = DbManager().db_auth(chat_id)
         else:
             with open('authorized_chats.txt', 'a') as file:
                 file.write(f'{chat_id}\n')
@@ -41,7 +41,7 @@ def authorize(update, context):
         if user_id in AUTHORIZED_CHATS:
             msg = 'User Already Authorized'
         elif DB_URI is not None:
-            msg = DbManger().db_auth(user_id)
+            msg = DbManager().db_auth(user_id)
         else:
             with open('authorized_chats.txt', 'a') as file:
                 file.write(f'{user_id}\n')
@@ -59,7 +59,7 @@ def unauthorize(update, context):
         user_id = int(message_[1])
         if user_id in AUTHORIZED_CHATS:
             if DB_URI is not None:
-                msg = DbManger().db_unauth(user_id)
+                msg = DbManager().db_unauth(user_id)
             else:
                 AUTHORIZED_CHATS.remove(user_id)
                 msg = 'User Unauthorized'
@@ -70,7 +70,7 @@ def unauthorize(update, context):
         chat_id = update.effective_chat.id
         if chat_id in AUTHORIZED_CHATS:
             if DB_URI is not None:
-                msg = DbManger().db_unauth(chat_id)
+                msg = DbManager().db_unauth(chat_id)
             else:
                 AUTHORIZED_CHATS.remove(chat_id)
                 msg = 'Chat Unauthorized'
@@ -81,7 +81,7 @@ def unauthorize(update, context):
         user_id = reply_message.from_user.id
         if user_id in AUTHORIZED_CHATS:
             if DB_URI is not None:
-                msg = DbManger().db_unauth(user_id)
+                msg = DbManager().db_unauth(user_id)
             else:
                 AUTHORIZED_CHATS.remove(user_id)
                 msg = 'User Unauthorized'
@@ -104,7 +104,7 @@ def addSudo(update, context):
         if user_id in SUDO_USERS:
             msg = 'Already Sudo'
         elif DB_URI is not None:
-            msg = DbManger().db_addsudo(user_id)
+            msg = DbManager().db_addsudo(user_id)
         else:
             with open('sudo_users.txt', 'a') as file:
                 file.write(f'{user_id}\n')
@@ -118,7 +118,7 @@ def addSudo(update, context):
         if user_id in SUDO_USERS:
             msg = 'Already Sudo'
         elif DB_URI is not None:
-            msg = DbManger().db_addsudo(user_id)
+            msg = DbManager().db_addsudo(user_id)
         else:
             with open('sudo_users.txt', 'a') as file:
                 file.write(f'{user_id}\n')
@@ -136,7 +136,7 @@ def removeSudo(update, context):
         user_id = int(message_[1])
         if user_id in SUDO_USERS:
             if DB_URI is not None:
-                msg = DbManger().db_rmsudo(user_id)
+                msg = DbManager().db_rmsudo(user_id)
             else:
                 SUDO_USERS.remove(user_id)
                 msg = 'Demoted'
@@ -148,7 +148,7 @@ def removeSudo(update, context):
         user_id = reply_message.from_user.id
         if user_id in SUDO_USERS:
             if DB_URI is not None:
-                msg = DbManger().db_rmsudo(user_id)
+                msg = DbManager().db_rmsudo(user_id)
             else:
                 SUDO_USERS.remove(user_id)
                 msg = 'Demoted'

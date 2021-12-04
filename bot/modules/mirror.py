@@ -42,6 +42,10 @@ from bot.helper.telegram_helper import button_build
 ariaDlManager = AriaDownloadHelper()
 ariaDlManager.start_listener()
 
+URI_REGEX = \
+    r"(?i)\b((?:ftp|https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|" \
+    "(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|" \
+    "[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))|magnet:\?xt=urn:btih:[\w!@#$&-?=%.()\\-`.+,/\"]*"
 
 class MirrorListener(listeners.MirrorListeners):
     def __init__(self, bot, update, isZip=False, extract=False, isQbit=False, isLeech=False, pswd=None):
@@ -219,7 +223,7 @@ class MirrorListener(listeners.MirrorListeners):
             else:
                 uname = f'<a href="tg://user?id={self.message.from_user.id}">{self.message.from_user.first_name}</a>'
             count = len(files)
-            msg = f'<b>Name: </b><code>{link}</code>\n\n'
+            msg = f'<b>Name: </b><code>{link}</code>\n'
             msg += f'<b>Total Files: </b>{count}'
             if typ != 0:
                 msg += f'\n<b>Corrupted Files: </b>{typ}'
@@ -257,11 +261,11 @@ class MirrorListener(listeners.MirrorListeners):
                 return
 
         with download_dict_lock:
-            msg = f'<b>Name: </b><code>{download_dict[self.uid].name()}</code>\n\n<b>Size: </b>{size}'
-            msg += f'\n\n<b>Type: </b>{typ}'
+            msg = f'<b>Name: </b><code>{download_dict[self.uid].name()}</code>\n<b>Size: </b><code>{size}</code>'
+            msg += f'\n<b>Type: </b><code>{typ}</code>'
             if os.path.isdir(f'{DOWNLOAD_DIR}/{self.uid}/{download_dict[self.uid].name()}'):
-                msg += f'\n<b>SubFolders: </b>{folders}'
-                msg += f'\n<b>Files: </b>{files}'
+                msg += f'\n<b>SubFolders: </b><code>{folders}</code>'
+                msg += f'\n<b>Files: </b><code>{files}</code>'
             buttons = button_build.ButtonMaker()
             link = short_url(link)
             buttons.buildbutton("☁️ Drive Link", link)
@@ -367,6 +371,13 @@ def _mirror(bot, update, isZip=False, extract=False, isQbit=False, isLeech=False
             if i is not None:
                 file = i
                 break
+        try:
+            reply_text = re.search(URI_REGEX, reply_to.text)
+            LOGGER.info(f"URL extracted: {reply_text[0]}")
+            link = reply_text[0]
+        except TypeError:
+            pass
+
         if (
             not bot_utils.is_url(link)
             and not bot_utils.is_magnet(link)

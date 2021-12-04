@@ -116,7 +116,7 @@ class QbitTorrent:
                     buttons.buildbutton("Select Files", f"{BASE_URL}/app/files/{self.ext_hash}?pin_code={self.pincode}")
                 buttons.sbutton("Done Selecting", f"done {self.gid} {self.ext_hash}")
                 QBBUTTONS = InlineKeyboardMarkup(buttons.build_menu(2))
-                msg = "Your download paused. Choose files then press Done Selecting button to start downloading."
+                msg = "Your download is paused. Choose files & then press Done to start downloading."
                 sendMarkup(msg, listener.bot, listener.update, QBBUTTONS)
             else:
                 sendStatusMessage(listener.update, listener.bot)

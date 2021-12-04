@@ -217,6 +217,24 @@ LOGGER.info("Generating USER_SESSION_STRING")
 app = Client('pyrogram', api_id=int(TELEGRAM_API), api_hash=TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=343)
 
 try:
+    FEEDS = getConfig('FEEDS')
+    FEEDS = FEEDS.lower() == "true"
+except KeyError:
+    FEEDS = False    
+
+try:
+    CHAT_ID = getConfig('CHAT_ID')
+    DELAY = int(getConfig('DELAY'))
+    SESSION_STRING = str(getConfig('SESSION_STRING'))
+    CUSTOM_MESSAGES = getConfig('CUSTOM_MESSAGES')
+except:
+    pass
+
+rss_session = None
+if SESSION_STRING is not None and SESSION_STRING != "":
+    rss_session = Client(SESSION_STRING, api_id=int(TELEGRAM_API), api_hash=TELEGRAM_HASH)
+
+try:
     TG_SPLIT_SIZE = getConfig('TG_SPLIT_SIZE')
     if len(TG_SPLIT_SIZE) == 0 or int(TG_SPLIT_SIZE) > 2097151000:
         raise KeyError
@@ -374,6 +392,15 @@ try:
     IGNORE_PENDING_REQUESTS = IGNORE_PENDING_REQUESTS.lower() == 'true'
 except KeyError:
     IGNORE_PENDING_REQUESTS = False
+try:
+    HEROKU_API_KEY = getConfig('HEROKU_API_KEY')
+    HEROKU_APP_NAME = getConfig('HEROKU_APP_NAME')
+    if len(HEROKU_API_KEY) == 0 or len(HEROKU_APP_NAME) == 0:
+        HEROKU_API_KEY = None
+        HEROKU_APP_NAME = None
+except KeyError:
+    HEROKU_API_KEY = None
+    HEROKU_APP_NAME = None
 try:
     BASE_URL = getConfig('BASE_URL_OF_BOT')
     if len(BASE_URL) == 0:

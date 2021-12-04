@@ -11,7 +11,7 @@ from telegram import ParseMode, InlineKeyboardMarkup
 from telegram.ext import CommandHandler
 
 from wserver import start_server_async
-from bot import bot, app, dispatcher, updater, botStartTime, IGNORE_PENDING_REQUESTS, IS_VPS, PORT, alive, web, nox, OWNER_ID, AUTHORIZED_CHATS, LOGGER
+from bot import bot, app, dispatcher, updater, botStartTime, IGNORE_PENDING_REQUESTS, IS_VPS, PORT, alive, web, nox, OWNER_ID, AUTHORIZED_CHATS, LOGGER, FEEDS, rss_session
 from bot.helper.ext_utils import fs_utils
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.message_utils import sendMessage, sendMarkup, editMessage, sendLogFile
@@ -19,7 +19,8 @@ from .helper.ext_utils.telegraph_helper import telegraph
 from .helper.ext_utils.bot_utils import get_readable_file_size, get_readable_time
 from .helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper import button_build
-from .modules import authorize, list, cancel_mirror, mirror_status, mirror, clone, watch, shell, eval, delete, speedtest, count, leech_settings, search
+from .modules.rssfeeds import rss_init
+from .modules import authorize, list, cancel_mirror, mirror_status, mirror, clone, watch, shell, eval, delete, speedtest, count, leech_settings, search, rssfeeds, reboot
 
 
 def stats(update, context):
@@ -31,39 +32,24 @@ def stats(update, context):
     sent = get_readable_file_size(psutil.net_io_counters().bytes_sent)
     recv = get_readable_file_size(psutil.net_io_counters().bytes_recv)
     cpuUsage = psutil.cpu_percent(interval=0.5)
+    memory = psutil.virtual_memory().percent
     disk = psutil.disk_usage('/').percent
-    p_core = psutil.cpu_count(logical=False)
-    t_core = psutil.cpu_count(logical=True)
-    swap = psutil.swap_memory()
-    swap_p = swap.percent
-    swap_t = get_readable_file_size(swap.total)
-    swap_u = get_readable_file_size(swap.used)
-    memory = psutil.virtual_memory()
-    mem_p = memory.percent
-    mem_t = get_readable_file_size(memory.total)
-    mem_a = get_readable_file_size(memory.available)
-    mem_u = get_readable_file_size(memory.used)
-    stats = f'<b>Bot Uptime:</b> {currentTime}\n\n'\
-            f'<b>Total Disk Space:</b> {total}\n'\
-            f'<b>Used:</b> {used} | <b>Free:</b> {free}\n\n'\
-            f'<b>Upload:</b> {sent}\n'\
-            f'<b>Download:</b> {recv}\n\n'\
-            f'<b>CPU:</b> {cpuUsage}%\n'\
-            f'<b>RAM:</b> {mem_p}%\n'\
-            f'<b>DISK:</b> {disk}%\n\n'\
-            f'<b>Physical Cores:</b> {p_core}\n'\
-            f'<b>Total Cores:</b> {t_core}\n\n'\
-            f'<b>SWAP:</b> {swap_t} | <b>Used:</b> {swap_p}%\n'\
-            f'<b>Memory Total:</b> {mem_t}\n'\
-            f'<b>Memory Free:</b> {mem_a}\n'\
-            f'<b>Memory Used:</b> {mem_u}\n'
+    stats = f'<b>Bot Uptime:</b> <code>{currentTime}</code>\n' \
+            f'<b>Disk Space:</b> <code>{total}</code>\n' \
+            f'<b>Used:</b> <code>{used}</code> ' \
+            f'<b>Free:</b> <code>{free}</code>\n\n' \
+            f'<b>Upload:</b> <code>{sent}</code>\n' \
+            f'<b>Download:</b> <code>{recv}</code>\n\n' \
+            f'<b>CPU:</b> <code>{cpuUsage}%</code> ' \
+            f'<b>RAM:</b> <code>{memory}%</code> ' \
+            f'<b>DISK:</b> <code>{disk}%</code>'
     sendMessage(stats, context.bot, update)
 
 
 def start(update, context):
     buttons = button_build.ButtonMaker()
-    buttons.buildbutton("Repo", "https://www.github.com/anasty17/mirror-leech-telegram-bot")
-    buttons.buildbutton("Report Group", "https://t.me/mltbbugsreport")
+    buttons.buildbutton("Repo", "https://github.com/hyPnOtICDo0g/hishirobot")
+    buttons.buildbutton("Read ReLIFE", "https://myanimelist.net/manga/78523/ReLIFE")
     reply_markup = InlineKeyboardMarkup(buttons.build_menu(2))
     if CustomFilters.authorized_user(update) or CustomFilters.authorized_chat(update):
         start_string = f'''
@@ -153,15 +139,15 @@ help_string_telegraph = f'''<br>
 <br><br>
 <b>/{BotCommands.ListCommand}</b> [query]: Search in Google Drive(s)
 <br><br>
-<b>/{BotCommands.SearchCommand}</b> [query]: Search for torrents with API
-<br>sites: <code>rarbg, 1337x, yts, etzv, tgx, torlock, piratebay, nyaasi, ettv</code><br><br>
+<b>/{BotCommands.SearchCommand}</b> [query]: Search for torrents using qbittorrent search plugins
+<br><br>
 <b>/{BotCommands.StatusCommand}</b>: Shows a status of all the downloads
 <br><br>
 <b>/{BotCommands.StatsCommand}</b>: Show Stats of the machine the bot is hosted on
 '''
 
 help = telegraph.create_page(
-        title='Mirror-Leech-Bot Help',
+        title='Hishirobot Help',
         content=help_string_telegraph,
     )["path"]
 
@@ -180,13 +166,19 @@ help_string = f'''
 
 /{BotCommands.RestartCommand}: Restart and update the bot
 
-/{BotCommands.LogCommand}: Get a log file of the bot. Handy for getting crash reports
+/{BotCommands.LogCommand}: Get a log file of the bot. Handy for getting crash reports.
 
 /{BotCommands.SpeedCommand}: Check Internet Speed of the Host
 
 /{BotCommands.ShellCommand}: Run commands in Shell (Only Owner)
 
 /{BotCommands.ExecHelpCommand}: Get help for Executor module (Only Owner)
+
+/{BotCommands.RebootCommand}: Restart the bot's dyno (Heroku only)
+
+/{BotCommands.ShutDownCommand}: Turn off the bot (Heroku only)
+
+/{BotCommands.RssHelpCommand}:  Get help for RSS feeds module (Only if FEEDS = "True")
 '''
 
 def bot_help(update, context):
@@ -196,37 +188,22 @@ def bot_help(update, context):
     sendMarkup(help_string, context.bot, update, reply_markup)
 
 botcmds = [
-
-        (f'{BotCommands.MirrorCommand}', 'Mirror'),
-        (f'{BotCommands.ZipMirrorCommand}','Mirror and upload as zip'),
-        (f'{BotCommands.UnzipMirrorCommand}','Mirror and extract files'),
-        (f'{BotCommands.QbMirrorCommand}','Mirror torrent using qBittorrent'),
-        (f'{BotCommands.QbZipMirrorCommand}','Mirror torrent and upload as zip using qb'),
-        (f'{BotCommands.QbUnzipMirrorCommand}','Mirror torrent and extract files using qb'),
-        (f'{BotCommands.WatchCommand}','Mirror yt-dlp supported link'),
-        (f'{BotCommands.ZipWatchCommand}','Mirror yt-dlp supported link as zip'),
+        (f'{BotCommands.HelpCommand}','Get Detailed Help'),
+        (f'{BotCommands.MirrorCommand}', 'Mirror supported URLs'),
+        (f'{BotCommands.UnzipMirrorCommand}','Extract files'),
+        (f'{BotCommands.ZipMirrorCommand}','Start mirroring and upload as .zip'),
+        (f'{BotCommands.QbMirrorCommand}','Start Mirroring using qBittorrent'),
         (f'{BotCommands.CloneCommand}','Copy file/folder to Drive'),
-        (f'{BotCommands.LeechCommand}','Leech'),
-        (f'{BotCommands.ZipLeechCommand}','Leech and upload as zip'),
-        (f'{BotCommands.UnzipLeechCommand}','Leech and extract files'),
-        (f'{BotCommands.QbLeechCommand}','Leech torrent using qBittorrent'),
-        (f'{BotCommands.QbZipLeechCommand}','Leech torrent and upload as zip using qb'),
-        (f'{BotCommands.QbUnzipLeechCommand}','Leech torrent and extract using qb'),
-        (f'{BotCommands.LeechWatchCommand}','Leech yt-dlp supported link'),
-        (f'{BotCommands.LeechZipWatchCommand}','Leech yt-dlp supported link as zip'),
-        (f'{BotCommands.CountCommand}','Count file/folder of Drive'),
-        (f'{BotCommands.DeleteCommand}','Delete file/folder from Drive'),
+        (f'{BotCommands.CountCommand}','Count file/folder of Drive link'),
+        (f'{BotCommands.DeleteCommand}','Delete file from Drive'),
         (f'{BotCommands.CancelMirror}','Cancel a task'),
-        (f'{BotCommands.CancelAllCommand}','Cancel all downloading tasks'),
-        (f'{BotCommands.ListCommand}','Search in Drive'),
-        (f'{BotCommands.LeechSetCommand}','Leech settings'),
-        (f'{BotCommands.SetThumbCommand}','Set thumbnail'),
-        (f'{BotCommands.StatusCommand}','Get mirror status message'),
-        (f'{BotCommands.StatsCommand}','Bot usage stats'),
-        (f'{BotCommands.PingCommand}','Ping the bot'),
-        (f'{BotCommands.RestartCommand}','Restart the bot'),
-        (f'{BotCommands.LogCommand}','Get the bot Log'),
-        (f'{BotCommands.HelpCommand}','Get detailed help')
+        (f'{BotCommands.CancelAllCommand}','Cancel all tasks'),
+        (f'{BotCommands.WatchCommand}','Mirror yt-dlp supported link'),        
+        (f'{BotCommands.ListCommand}','Recursively searches files/folders in Drive'),
+        (f'{BotCommands.StatusCommand}','Get Mirror Status message'),
+        (f'{BotCommands.StatsCommand}','Bot Usage Stats'),
+        (f'{BotCommands.RestartCommand}','Restart the bot [owner/sudo only]'),
+        (f'{BotCommands.LogCommand}','Get the Bot Log [owner/sudo only]'),
     ]
 
 def main():
@@ -240,16 +217,8 @@ def main():
             chat_id, msg_id = map(int, f)
         bot.edit_message_text("Restarted successfully!", chat_id, msg_id)
         os.remove(".restartmsg")
-    elif OWNER_ID:
-        try:
-            text = "<b>Bot Restarted!</b>"
-            bot.sendMessage(chat_id=OWNER_ID, text=text, parse_mode=ParseMode.HTML)
-            if AUTHORIZED_CHATS:
-                for i in AUTHORIZED_CHATS:
-                    bot.sendMessage(chat_id=i, text=text, parse_mode=ParseMode.HTML)
-        except Exception as e:
-            LOGGER.warning(e)
 
+    bot.set_my_commands(botcmds)
     start_handler = CommandHandler(BotCommands.StartCommand, start, run_async=True)
     ping_handler = CommandHandler(BotCommands.PingCommand, ping,
                                   filters=CustomFilters.authorized_chat | CustomFilters.authorized_user, run_async=True)
@@ -269,6 +238,12 @@ def main():
     updater.start_polling(drop_pending_updates=IGNORE_PENDING_REQUESTS)
     LOGGER.info("Bot Started!")
     signal.signal(signal.SIGINT, fs_utils.exit_clean_up)
+    if FEEDS:
+        rss_init()
+        LOGGER.info("RSS feeds function initiated.")
+        if rss_session is not None:
+            rss_session.start()
+            LOGGER.info("Using SESSION_STRING for RSS feeds.")
 
 app.start()
 main()
